@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FX PRO MANAGER</title>
+<style>
+body {
+  background:#121212;
+  color:white;
+  font-family:sans-serif;
+  padding:15px;
+}
+input, select, button {
+  width:100%;
+  margin:5px 0;
+  padding:10px;
+  font-size:16px;
+  border-radius:8px;
+}
+button {
+  background:#0A84FF;
+  color:white;
+}
+.result {
+  font-size:30px;
+  text-align:center;
+  margin-top:20px;
+}
+</style>
+</head>
+<body>
+
+<h2>FX PRO MANAGER</h2>
+
+<select id="type">
+  <option value="buy">買い</option>
+  <option value="sell">売り</option>
+</select>
+
+<select id="pair">
+  <option>AUD/USD</option>
+  <option>USD/JPY</option>
+  <option>EUR/JPY</option>
+  <option>EUR/USD</option>
+</select>
+
+<input id="entry" placeholder="エントリー価格">
+<input id="exit" placeholder="決済価格">
+<input id="sl" placeholder="損切（任意）">
+<input id="lots" placeholder="ロット" value="0.1">
+<input id="rate" placeholder="円換算レート" value="150">
+
+<button onclick="calc()">計算</button>
+
+<div class="result" id="result">¥0</div>
+
+<script>
+function calc() {
+  let type = document.getElementById("type").value;
+  let pair = document.getElementById("pair").value;
+
+  let entry = parseFloat(entryInput.value);
+  let exit = parseFloat(exitInput.value);
+  let lots = parseFloat(lotsInput.value);
+  let rate = parseFloat(rateInput.value);
+
+  let pip = pair.includes("JPY") ? 100 : 10000;
+
+  let pips = type === "buy"
+    ? (exit - entry) * pip
+    : (entry - exit) * pip;
+
+  let profit = (pips / pip) * (lots * 100000);
+  if (!pair.includes("JPY")) profit *= rate;
+
+  let result = document.getElementById("result");
+  result.innerText = "¥" + Math.round(profit).toLocaleString();
+  result.style.color = profit >= 0 ? "#00FF41" : "#FF3B30";
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FX PRO MANAGER</title>
+
+<!-- グラフ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  background:#121212;
+  color:white;
+  font-family:sans-serif;
+  padding:15px;
+}
+input, select, button {
+  width:100%;
+  margin:5px 0;
+  padding:10px;
+  font-size:16px;
+  border-radius:8px;
+}
+button {
+  background:#0A84FF;
+  color:white;
+}
+.result {
+  font-size:30px;
+  text-align:center;
+  margin-top:20px;
+}
+.box {
+  margin-top:15px;
+}
+</style>
+</head>
+<body>
+
+<h2>FX PRO MANAGER</h2>
+
+<select id="type">
+  <option value="buy">買い</option>
+  <option value="sell">売り</option>
+</select>
+
+<select id="pair">
+  <option>AUD/USD</option>
+  <option>USD/JPY</option>
+  <option>EUR/JPY</option>
+  <option>EUR/USD</option>
+</select>
+
+<input id="entry" placeholder="エントリー価格">
+<input id="exit" placeholder="決済価格">
+<input id="lots" value="0.1">
+<input id="rate" value="150">
+
+<button onclick="calc()">計算</button>
+
+<div class="result" id="result">¥0</div>
+
+<div class="box" id="monthly">今月: ¥0</div>
+<div class="box" id="yearly">今年: ¥0</div>
+
+<canvas id="chart" height="200"></canvas>
+
+<script>
+
+// ===== 計算 =====
+function calc() {
+  let type = document.getElementById("type").value;
+  let pair = document.getElementById("pair").value;
+
+  let entry = parseFloat(document.getElementById("entry").value);
+  let exit = parseFloat(document.getElementById("exit").value);
+  let lots = parseFloat(document.getElementById("lots").value);
+  let rate = parseFloat(document.getElementById("rate").value);
+
+  if (!entry || !exit) {
+    alert("価格を入力してください");
+    return;
+  }
+
+  let pip = pair.includes("JPY") ? 100 : 10000;
+
+  let pips = type === "buy"
+    ? (exit - entry) * pip
+    : (entry - exit) * pip;
+
+  let profit = (pips / pip) * (lots * 100000);
+  if (!pair.includes("JPY")) profit *= rate;
+
+  document.getElementById("result").innerText =
+    "¥" + Math.round(profit).toLocaleString();
+
+  document.getElementById("result").style.color =
+    profit >= 0 ? "#00FF41" : "#FF3B30";
+
+  saveHistory(profit);
+  updateAll();
+}
+
+// ===== 履歴保存 =====
+function saveHistory(profit) {
+  let history = JSON.parse(localStorage.getItem("history") || "[]");
+
+  history.push({
+    date: new Date().toISOString(),
+    profit: profit
+  });
+
+  localStorage.setItem("history", JSON.stringify(history));
+}
+
+// ===== 月次・年次 =====
+function getMonthlyTotal() {
+  let history = JSON.parse(localStorage.getItem("history") || "[]");
+  let month = new Date().toISOString().slice(0,7);
+
+  return history
+    .filter(r => r.date.startsWith(month))
+    .reduce((sum, r) => sum + r.profit, 0);
+}
+
+function getYearlyTotal() {
+  let history = JSON.parse(localStorage.getItem("history") || "[]");
+  let year = new Date().getFullYear();
+
+  return history
+    .filter(r => new Date(r.date).getFullYear() === year)
+    .reduce((sum, r) => sum + r.profit, 0);
+}
+
+// ===== グラフ =====
+let chart;
+
+function drawChart() {
+  let history = JSON.parse(localStorage.getItem("history") || "[]");
+
+  let map = {};
+
+  history.forEach(r => {
+    let m = r.date.slice(0,7);
+    if (!map[m]) map[m] = 0;
+    map[m] += r.profit;
+  });
+
+  let labels = Object.keys(map).sort();
+  let values = labels.map(l => map[l]);
+
+  let ctx = document.getElementById("chart");
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: values.map(v =>
+          v >= 0 ? "#00FF41" : "#FF3B30"
+        )
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+// ===== 更新まとめ =====
+function updateAll() {
+  let monthly = getMonthlyTotal();
+  let yearly = getYearlyTotal();
+
+  let m = document.getElementById("monthly");
+  m.innerText = "今月: ¥" + Math.round(monthly).toLocaleString();
+  m.style.color = monthly >= 0 ? "#00FF41" : "#FF3B30";
+
+  let y = document.getElementById("yearly");
+  y.innerText = "今年: ¥" + Math.round(yearly).toLocaleString();
+  y.style.color = yearly >= 0 ? "#00FF41" : "#FF3B30";
+
+  drawChart();
+}
+
+// 初期表示
+updateAll();
+
+</script>
+
+</body>
+</html>
